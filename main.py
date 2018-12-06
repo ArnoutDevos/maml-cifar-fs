@@ -19,9 +19,13 @@ Usage Instructions:
     5-way 5-shot mini imagenet:
         python main.py --datasource=miniimagenet --metatrain_iterations=60000 --meta_batch_size=4 --update_batch_size=5 --update_lr=0.01 --num_updates=5 --num_classes=5 --logdir=logs/miniimagenet5shot/ --num_filters=32 --max_pool=True
 
+    5-way 1-shot CIFAR fs:
+        python main.py --datasource=cifarfs --metatrain_iterations=60000 --meta_batch_size=4 --update_batch_size=1 --update_lr=0.01 --num_updates=5 --num_classes=5 --logdir=logs/cifarfs1shot/ --num_filters=32 --max_pool=True
+
     To run evaluation, use the '--train=False' flag and the '--test_set=True' flag to use the test set.
 
     For omniglot and miniimagenet training, acquire the dataset online, put it in the correspoding data directory, and see the python script instructions in that directory to preprocess the data.
+    For CIFAR fs training, the dataset is automatically downloaded, and the splits are present in this code.
 """
 import csv
 import numpy as np
@@ -219,7 +223,7 @@ def main():
         else:
             test_num_updates = 10
     else:
-        if FLAGS.datasource == 'miniimagenet':
+        if FLAGS.datasource == 'miniimagenet' or FLAGS.datasource == 'cifarfs':
             if FLAGS.train == True:
                 test_num_updates = 1  # eval on at least one update during training
             else:
@@ -235,12 +239,12 @@ def main():
     if FLAGS.datasource == 'sinusoid':
         data_generator = DataGenerator(FLAGS.update_batch_size*2, FLAGS.meta_batch_size)
     else:
-        if FLAGS.metatrain_iterations == 0 and FLAGS.datasource == 'miniimagenet':
+        if FLAGS.metatrain_iterations == 0 and (FLAGS.datasource == 'miniimagenet' or FLAGS.datasource == 'cifarfs'):
             assert FLAGS.meta_batch_size == 1
             assert FLAGS.update_batch_size == 1
             data_generator = DataGenerator(1, FLAGS.meta_batch_size)  # only use one datapoint,
         else:
-            if FLAGS.datasource == 'miniimagenet': # TODO - use 15 val examples for imagenet?
+            if FLAGS.datasource == 'miniimagenet' or FLAGS.datasource == 'cifarfs': # TODO - use 15 val examples for imagenet?
                 if FLAGS.train:
                     data_generator = DataGenerator(FLAGS.update_batch_size+15, FLAGS.meta_batch_size)  # only use one datapoint for testing to save memory
                 else:
@@ -258,7 +262,7 @@ def main():
     else:
         dim_input = data_generator.dim_input
 
-    if FLAGS.datasource == 'miniimagenet' or FLAGS.datasource == 'omniglot':
+    if FLAGS.datasource == 'miniimagenet' or FLAGS.datasource == 'omniglot' or FLAGS.datasource == 'cifarfs':
         tf_data_load = True
         num_classes = data_generator.num_classes
 

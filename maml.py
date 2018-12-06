@@ -28,7 +28,7 @@ class MAML:
             self.loss_func = mse
             self.forward = self.forward_fc
             self.construct_weights = self.construct_fc_weights
-        elif FLAGS.datasource == 'omniglot' or FLAGS.datasource == 'miniimagenet':
+        elif FLAGS.datasource == 'omniglot' or FLAGS.datasource == 'miniimagenet' or FLAGS.datasource == 'cifarfs':
             self.loss_func = xent
             self.classification = True
             if FLAGS.conv:
@@ -39,7 +39,7 @@ class MAML:
                 self.dim_hidden = [256, 128, 64, 64]
                 self.forward=self.forward_fc
                 self.construct_weights = self.construct_fc_weights
-            if FLAGS.datasource == 'miniimagenet':
+            if FLAGS.datasource == 'miniimagenet' or FLAGS.datasource == 'cifarfs':
                 self.channels = 3
             else:
                 self.channels = 1
@@ -144,7 +144,7 @@ class MAML:
             if FLAGS.metatrain_iterations > 0:
                 optimizer = tf.train.AdamOptimizer(self.meta_lr)
                 self.gvs = gvs = optimizer.compute_gradients(self.total_losses2[FLAGS.num_updates-1])
-                if FLAGS.datasource == 'miniimagenet':
+                if FLAGS.datasource == 'miniimagenet' or FLAGS.datasource == 'cifarfs':
                     gvs = [(tf.clip_by_value(grad, -10, 10), var) for grad, var in gvs]
                 self.metatrain_op = optimizer.apply_gradients(gvs)
         else:
@@ -202,6 +202,10 @@ class MAML:
             # assumes max pooling
             weights['w5'] = tf.get_variable('w5', [self.dim_hidden*5*5, self.dim_output], initializer=fc_initializer)
             weights['b5'] = tf.Variable(tf.zeros([self.dim_output]), name='b5')
+        elif FLAGS.datasource == 'cifarfs':
+            # assumes max pooling
+            weights['w5'] = tf.get_variable('w5', [self.dim_hidden*2*2, self.dim_output], initializer=fc_initializer)
+            weights['b5'] = tf.Variable(tf.zeros([self.dim_output]), name='b5')
         else:
             weights['w5'] = tf.Variable(tf.random_normal([self.dim_hidden, self.dim_output]), name='w5')
             weights['b5'] = tf.Variable(tf.zeros([self.dim_output]), name='b5')
@@ -216,7 +220,7 @@ class MAML:
         hidden2 = conv_block(hidden1, weights['conv2'], weights['b2'], reuse, scope+'1')
         hidden3 = conv_block(hidden2, weights['conv3'], weights['b3'], reuse, scope+'2')
         hidden4 = conv_block(hidden3, weights['conv4'], weights['b4'], reuse, scope+'3')
-        if FLAGS.datasource == 'miniimagenet':
+        if FLAGS.datasource == 'miniimagenet' or FLAGS.datasource == 'cifarfs':
             # last hidden layer is 6x6x64-ish, reshape to a vector
             hidden4 = tf.reshape(hidden4, [-1, np.prod([int(dim) for dim in hidden4.get_shape()[1:]])])
         else:

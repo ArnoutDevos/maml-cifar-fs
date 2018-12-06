@@ -1,6 +1,6 @@
-# Model-Agnostic Meta-Learning
+# Model-Agnostic Meta-Learning on Omniglot, miniImageNet, and CIFAR-FS
 
-This repo contains code accompaning the paper, 	[Model-Agnostic Meta-Learning for Fast Adaptation of Deep Networks (Finn et al., ICML 2017)](https://arxiv.org/abs/1703.03400). It includes code for running the few-shot supervised learning domain experiments, including sinusoid regression, Omniglot classification, and MiniImagenet classification.
+This repo extends the original MAML code ([link](https://github.com/cbfinn/maml), [ICML 2017 paper](https://arxiv.org/abs/1703.03400)) [1] with CIFAR-FS classification based on the splits in Luca et al. [2]. It includes code for running the few-shot supervised learning domain experiments, including sinusoid regression, Omniglot classification, MiniImagenet classification, and the newly added CIFAR-FS classification.
 
 For the experiments in the RL domain, see [this codebase](https://github.com/cbfinn/maml_rl).
 
@@ -10,10 +10,23 @@ This code requires the following:
 * TensorFlow v1.0+
 
 ### Data
-For the Omniglot and MiniImagenet data, see the usage instructions in `data/omniglot_resized/resize_images.py` and `data/miniImagenet/proc_images.py` respectively.
+For the Omniglot, MiniImagenet and CIFAR-FS data, see the usage instructions in `data/omniglot_resized/resize_images.py` and `data/miniImagenet/proc_images.py` and `data/CIFARFS/get_cifarfs.py` respectively.
 
 ### Usage
 To run the code, see the usage instructions at the top of `main.py`.
 
-### Contact
-To ask questions or report issues, please open an issue on the [issues tracker](https://github.com/cbfinn/maml/issues).
+### Results
+
+After 60,000 iterations, with a 95% confidence interval estimate:
+
+| Method        | Classification Accuracy |
+| ------------- | :---------------------: |
+| 5-way, 1-shot |      56.8% ± 1.9%       |
+|               |                         |
+|               |                         |
+
+### References
+
+[1] Finn, Chelsea, Pieter Abbeel, and Sergey Levine. "Model-agnostic meta-learning for fast adaptation of deep networks." *arXiv preprint arXiv:1703.03400* (2017).
+
+[2] Bertinetto, Luca, et al. "Meta-learning with differentiable closed-form solvers." *arXiv preprint arXiv:1805.08136* (2018).

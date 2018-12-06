@@ -75,6 +75,28 @@ class DataGenerator(object):
             self.metatrain_character_folders = metatrain_folders
             self.metaval_character_folders = metaval_folders
             self.rotations = config.get('rotations', [0])
+        elif FLAGS.datasource == 'cifarfs':
+            self.num_classes = config.get('num_classes', FLAGS.num_classes)
+            self.img_size = config.get('img_size', (32, 32))
+            self.dim_input = np.prod(self.img_size)*3
+            self.dim_output = self.num_classes
+            metatrain_folder = config.get('metatrain_folder', './data/cifar-fs/train')
+            if FLAGS.test_set:
+                metaval_folder = config.get('metaval_folder', './data/cifar-fs/test')
+            else:
+                metaval_folder = config.get('metaval_folder', './data/cifar-fs/val')
+
+            metatrain_folders = [os.path.join(metatrain_folder, label) \
+                for label in os.listdir(metatrain_folder) \
+                if os.path.isdir(os.path.join(metatrain_folder, label)) \
+                ]
+            metaval_folders = [os.path.join(metaval_folder, label) \
+                for label in os.listdir(metaval_folder) \
+                if os.path.isdir(os.path.join(metaval_folder, label)) \
+                ]
+            self.metatrain_character_folders = metatrain_folders
+            self.metaval_character_folders = metaval_folders
+            self.rotations = config.get('rotations', [0])
         else:
             raise ValueError('Unrecognized data source')
 
@@ -105,7 +127,7 @@ class DataGenerator(object):
         print('Generating image processing ops')
         image_reader = tf.WholeFileReader()
         _, image_file = image_reader.read(filename_queue)
-        if FLAGS.datasource == 'miniimagenet':
+        if FLAGS.datasource == 'miniimagenet' or FLAGS.datasource == 'cifarfs':
             image = tf.image.decode_jpeg(image_file, channels=3)
             image.set_shape((self.img_size[0],self.img_size[1],3))
             image = tf.reshape(image, [self.dim_input])
