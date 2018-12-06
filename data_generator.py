@@ -80,11 +80,11 @@ class DataGenerator(object):
             self.img_size = config.get('img_size', (32, 32))
             self.dim_input = np.prod(self.img_size)*3
             self.dim_output = self.num_classes
-            metatrain_folder = config.get('metatrain_folder', './data/cifar-fs/train')
+            metatrain_folder = config.get('metatrain_folder', './data/CIFARFS/train')
             if FLAGS.test_set:
-                metaval_folder = config.get('metaval_folder', './data/cifar-fs/test')
+                metaval_folder = config.get('metaval_folder', './data/CIFARFS/test')
             else:
-                metaval_folder = config.get('metaval_folder', './data/cifar-fs/val')
+                metaval_folder = config.get('metaval_folder', './data/CIFARFS/val')
 
             metatrain_folders = [os.path.join(metatrain_folder, label) \
                 for label in os.listdir(metatrain_folder) \

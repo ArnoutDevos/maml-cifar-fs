@@ -21,7 +21,10 @@ Usage Instructions:
 
     5-way 1-shot CIFAR fs:
         python main.py --datasource=cifarfs --metatrain_iterations=60000 --meta_batch_size=4 --update_batch_size=1 --update_lr=0.01 --num_updates=5 --num_classes=5 --logdir=logs/cifarfs1shot/ --num_filters=32 --max_pool=True
-
+        
+    5-way 5-shot CIFAR fs:
+        python main.py --datasource=cifarfs --metatrain_iterations=60000 --meta_batch_size=4 --update_batch_size=5 --update_lr=0.01 --num_updates=5 --num_classes=5 --logdir=logs/cifarfs5shot/ --num_filters=32 --max_pool=True
+        
     To run evaluation, use the '--train=False' flag and the '--test_set=True' flag to use the test set.
 
     For omniglot and miniimagenet training, acquire the dataset online, put it in the correspoding data directory, and see the python script instructions in that directory to preprocess the data.
