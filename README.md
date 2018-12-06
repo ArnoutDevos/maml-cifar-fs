@@ -21,7 +21,7 @@ After 60,000 iterations, with a 95% confidence interval estimate:
 
 | Method        | Classification Accuracy |
 | ------------- | :---------------------: |
-| 5-way, 1-shot |      56.8% ± 1.9%       |
+| CIFAR-FS 5-way, 1-shot |      56.8% ± 1.9%       |
 |               |                         |
 |               |                         |
 
