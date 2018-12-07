@@ -19,7 +19,7 @@ To run the code, see the usage instructions at the top of `main.py`.
 
 After 60,000 iterations, with a 95% confidence interval, and 10 finetune steps:
 
-| Dataset, method | Classification Accuracy | MAML [1] & R2D2 [2] |
+| Dataset, method | this code<br />accuracy | reported by<br />MAML [1] & R2D2 [2] |
 | ------------- | :---------------------: | :-----------: |
 | CIFAR-FS, MAML 5-way, 1-shot |      56.8% ± 1.9%       | 58.9 ± 1.9% |
 | CIFAR-FS, MAML 5-way, 5-shot | 70.78% ± 0.94% | 71.5 ± 1.0% |
