@@ -276,7 +276,7 @@ def main():
         if FLAGS.train: # only construct training model if needed
             random.seed(5)
             image_tensor, label_tensor = data_generator.make_data_tensor()
-            inputa = tf.slice(image_tensor, [0,0,0], [-1,num_classes*FLAGS.update_batch_size, -1])
+            inputa = tf.slice(image_tensor, [0,0,0], [-1,num_classes*FLAGS.update_batch_size, -1]) # slice(tensor, begin, slice_size)
             inputb = tf.slice(image_tensor, [0,num_classes*FLAGS.update_batch_size, 0], [-1,-1,-1])
             labela = tf.slice(label_tensor, [0,0,0], [-1,num_classes*FLAGS.update_batch_size, -1])
             labelb = tf.slice(label_tensor, [0,num_classes*FLAGS.update_batch_size, 0], [-1,-1,-1])
@@ -293,6 +293,7 @@ def main():
         tf_data_load = False
         input_tensors = None
 
+    #Commented/tracked until here
     model = MAML(dim_input, dim_output, test_num_updates=test_num_updates)
     if FLAGS.train or not tf_data_load:
         model.construct_model(input_tensors=input_tensors, prefix='metatrain_')
