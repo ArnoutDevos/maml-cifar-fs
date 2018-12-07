@@ -17,13 +17,14 @@ To run the code, see the usage instructions at the top of `main.py`.
 
 ### Results
 
-After 60,000 iterations, with a 95% confidence interval estimate:
+After 60,000 iterations, with a 95% confidence interval, and 10 finetune steps:
 
-| Method        | Classification Accuracy |
-| ------------- | :---------------------: |
-| CIFAR-FS 5-way, 1-shot |      56.8% ± 1.9%       |
-|               |                         |
-|               |                         |
+| Dataset, method | Classification Accuracy | MAML [1] & R2D2 [2] |
+| ------------- | :---------------------: | :-----------: |
+| CIFAR-FS, MAML 5-way, 1-shot |      56.8% ± 1.9%       | 58.9 ± 1.9% |
+| CIFAR-FS, MAML 5-way, 5-shot | 70.78% ± 0.94% | 71.5 ± 1.0% |
+| miniImagenet, MAML 5-way, 1-shot | 47.63% ± 1.89% | 48.70% ± 1.84% |
+| miniImagenet, MAML 5-way, 5-shot | - | 63.11% ± 0.92% |
 
 ### References
 
