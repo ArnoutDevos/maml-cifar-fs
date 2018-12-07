@@ -50,18 +50,18 @@ flags.DEFINE_string('baseline', None, 'oracle, or None')
 
 ## Training options
 flags.DEFINE_integer('pretrain_iterations', 0, 'number of pre-training iterations.')
-flags.DEFINE_integer('metatrain_iterations', 15000, 'number of metatraining iterations.') # 15k for omniglot, 50k for sinusoid
-flags.DEFINE_integer('meta_batch_size', 25, 'number of tasks sampled per meta-update')
+flags.DEFINE_integer('metatrain_iterations', 15000, 'number of metatraining iterations.') # 60k meta training iterations for miniImagenet (15k for omniglot, 50k for sinusoid)
+flags.DEFINE_integer('meta_batch_size', 25, 'number of tasks sampled per meta-update') # 4 for miniImagenet
 flags.DEFINE_float('meta_lr', 0.001, 'the base learning rate of the generator')
 flags.DEFINE_integer('update_batch_size', 5, 'number of examples used for inner gradient update (K for K-shot learning).')
-flags.DEFINE_float('update_lr', 1e-3, 'step size alpha for inner gradient update.') # 0.1 for omniglot
-flags.DEFINE_integer('num_updates', 1, 'number of inner gradient updates during training.')
+flags.DEFINE_float('update_lr', 1e-3, 'step size alpha for inner gradient update.') # 0.01 for miniImagenet (0.1 for omniglot)
+flags.DEFINE_integer('num_updates', 1, 'number of inner gradient updates during training.') # 5 inner gradient updates for miniImagenet
 
 ## Model options
 flags.DEFINE_string('norm', 'batch_norm', 'batch_norm, layer_norm, or None')
-flags.DEFINE_integer('num_filters', 64, 'number of filters for conv nets -- 32 for miniimagenet, 64 for omiglot.')
+flags.DEFINE_integer('num_filters', 64, 'number of filters for conv nets -- 32 for miniimagenet, 64 for omiglot.') # 32 filters for miniImagenet
 flags.DEFINE_bool('conv', True, 'whether or not to use a convolutional network, only applicable in some cases')
-flags.DEFINE_bool('max_pool', False, 'Whether or not to use max pooling rather than strided convolutions')
+flags.DEFINE_bool('max_pool', False, 'Whether or not to use max pooling rather than strided convolutions') # True max pooling for miniImagenet
 flags.DEFINE_bool('stop_grad', False, 'if True, do not use second derivatives in meta-optimization (for speed)')
 
 ## Logging, saving, and testing options
@@ -91,28 +91,30 @@ def train(model, saver, sess, exp_string, data_generator, resume_itr=0):
 
     num_classes = data_generator.num_classes # for classification, 1 otherwise
     multitask_weights, reg_weights = [], []
-
+    
+    # Start iterations from resume_itr if there is a training history
     for itr in range(resume_itr, FLAGS.pretrain_iterations + FLAGS.metatrain_iterations):
         feed_dict = {}
-        if 'generate' in dir(data_generator):
+        if 'generate' in dir(data_generator): # This is for sinusoid only
             batch_x, batch_y, amp, phase = data_generator.generate()
 
-            if FLAGS.baseline == 'oracle':
+            if FLAGS.baseline == 'oracle': # NOTE - this flag is specific to sinusoid
                 batch_x = np.concatenate([batch_x, np.zeros([batch_x.shape[0], batch_x.shape[1], 2])], 2)
                 for i in range(FLAGS.meta_batch_size):
                     batch_x[i, :, 1] = amp[i]
                     batch_x[i, :, 2] = phase[i]
-
+            
+            # a = base-train, b = base-test
             inputa = batch_x[:, :num_classes*FLAGS.update_batch_size, :]
             labela = batch_y[:, :num_classes*FLAGS.update_batch_size, :]
-            inputb = batch_x[:, num_classes*FLAGS.update_batch_size:, :] # b used for testing
+            inputb = batch_x[:, num_classes*FLAGS.update_batch_size:, :]
             labelb = batch_y[:, num_classes*FLAGS.update_batch_size:, :]
             feed_dict = {model.inputa: inputa, model.inputb: inputb,  model.labela: labela, model.labelb: labelb}
 
         if itr < FLAGS.pretrain_iterations:
             input_tensors = [model.pretrain_op]
         else:
-            input_tensors = [model.metatrain_op]
+            input_tensors = [model.metatrain_op] # metatrain_op is a tf Operation that does the meta update with Adam
 
         if (itr % SUMMARY_INTERVAL == 0 or itr % PRINT_INTERVAL == 0):
             input_tensors.extend([model.summ_op, model.total_loss1, model.total_losses2[FLAGS.num_updates-1]])
@@ -222,17 +224,17 @@ def test(model, saver, sess, exp_string, data_generator, test_num_updates=None):
 def main():
     if FLAGS.datasource == 'sinusoid':
         if FLAGS.train:
-            test_num_updates = 5
+            test_num_updates = 5 # During base-testing (and thus meta updating) 5 updates are used
         else:
-            test_num_updates = 10
+            test_num_updates = 10 # During meta-testing 10 updates are used
     else:
         if FLAGS.datasource == 'miniimagenet' or FLAGS.datasource == 'cifarfs':
             if FLAGS.train == True:
                 test_num_updates = 1  # eval on at least one update during training
             else:
-                test_num_updates = 10
+                test_num_updates = 10 # eval on 10 updates during testing
         else:
-            test_num_updates = 10
+            test_num_updates = 10 # Omniglot gets 10 updates during training AND testing
 
     if FLAGS.train == False:
         orig_meta_batch_size = FLAGS.meta_batch_size
@@ -240,30 +242,32 @@ def main():
         FLAGS.meta_batch_size = 1
 
     if FLAGS.datasource == 'sinusoid':
-        data_generator = DataGenerator(FLAGS.update_batch_size*2, FLAGS.meta_batch_size)
-    else:
+        # DataGenerator(num_samples_per_class, batch_size, config={})
+        data_generator = DataGenerator(FLAGS.update_batch_size*2, FLAGS.meta_batch_size) 
+    else: # Dealing with a non 'sinusoid' dataset here
         if FLAGS.metatrain_iterations == 0 and (FLAGS.datasource == 'miniimagenet' or FLAGS.datasource == 'cifarfs'):
             assert FLAGS.meta_batch_size == 1
             assert FLAGS.update_batch_size == 1
             data_generator = DataGenerator(1, FLAGS.meta_batch_size)  # only use one datapoint,
         else:
             if FLAGS.datasource == 'miniimagenet' or FLAGS.datasource == 'cifarfs': # TODO - use 15 val examples for imagenet?
-                if FLAGS.train:
+                if FLAGS.train: # TODO: why +15 and *2 --> followin Ravi: "15 examples per class were used for evaluating the post-update meta-gradient" --> see how 5 and 15 is split up in maml.py?
+                    # DataGenerator(number_of_images_per_class, number_of_tasks_in_batch)
                     data_generator = DataGenerator(FLAGS.update_batch_size+15, FLAGS.meta_batch_size)  # only use one datapoint for testing to save memory
                 else:
                     data_generator = DataGenerator(FLAGS.update_batch_size*2, FLAGS.meta_batch_size)  # only use one datapoint for testing to save memory
-            else:
+            else: # this is for omniglot
                 data_generator = DataGenerator(FLAGS.update_batch_size*2, FLAGS.meta_batch_size)  # only use one datapoint for testing to save memory
 
 
-    dim_output = data_generator.dim_output
-    if FLAGS.baseline == 'oracle':
+    dim_output = data_generator.dim_output # number of classes, e.g. 5 for miniImagenet tasks
+    if FLAGS.baseline == 'oracle': # NOTE - this flag is specific to sinusoid
         assert FLAGS.datasource == 'sinusoid'
         dim_input = 3
         FLAGS.pretrain_iterations += FLAGS.metatrain_iterations
         FLAGS.metatrain_iterations = 0
     else:
-        dim_input = data_generator.dim_input
+        dim_input = data_generator.dim_input # np.prod(self.img_size) for images
 
     if FLAGS.datasource == 'miniimagenet' or FLAGS.datasource == 'omniglot' or FLAGS.datasource == 'cifarfs':
         tf_data_load = True

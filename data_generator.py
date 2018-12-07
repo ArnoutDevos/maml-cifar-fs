@@ -33,6 +33,7 @@ class DataGenerator(object):
             self.dim_output = 1
         elif 'omniglot' in FLAGS.datasource:
             self.num_classes = config.get('num_classes', FLAGS.num_classes)
+            # dictionary.get() returns a value for the given key. If key is not available then returns default value None.
             self.img_size = config.get('img_size', (28, 28))
             self.dim_input = np.prod(self.img_size)
             self.dim_output = self.num_classes
@@ -127,6 +128,7 @@ class DataGenerator(object):
         print('Generating image processing ops')
         image_reader = tf.WholeFileReader()
         _, image_file = image_reader.read(filename_queue)
+        
         if FLAGS.datasource == 'miniimagenet' or FLAGS.datasource == 'cifarfs':
             image = tf.image.decode_jpeg(image_file, channels=3)
             image.set_shape((self.img_size[0],self.img_size[1],3))
@@ -134,24 +136,25 @@ class DataGenerator(object):
             image = tf.cast(image, tf.float32) / 255.0
         else:
             image = tf.image.decode_png(image_file)
-            image.set_shape((self.img_size[0],self.img_size[1],1))
+            image.set_shape((self.img_size[0],self.img_size[1],1)) # Omniglot has only 1 channel
             image = tf.reshape(image, [self.dim_input])
             image = tf.cast(image, tf.float32) / 255.0
             image = 1.0 - image  # invert
+        
         num_preprocess_threads = 1 # TODO - enable this to be set to >1
         min_queue_examples = 256
-        examples_per_batch = self.num_classes * self.num_samples_per_class
-        batch_image_size = self.batch_size  * examples_per_batch
+        examples_per_batch = self.num_classes * self.num_samples_per_class # amount of examples in task
+        batch_image_size = self.batch_size  * examples_per_batch # amount of examples in batch of tasks
         print('Batching images')
         images = tf.train.batch(
                 [image],
                 batch_size = batch_image_size,
                 num_threads=num_preprocess_threads,
                 capacity=min_queue_examples + 3 * batch_image_size,
-                )
+                )# TODO why 3*batch_image_size?!
         all_image_batches, all_label_batches = [], []
         print('Manipulating image data to be right shape')
-        for i in range(self.batch_size):
+        for i in range(self.batch_size): # self.batch_size = amount of tasks per batch
             image_batch = images[i*examples_per_batch:(i+1)*examples_per_batch]
 
             if FLAGS.datasource == 'omniglot':
@@ -166,11 +169,14 @@ class DataGenerator(object):
 
                 true_idxs = class_idxs*self.num_samples_per_class + k
                 new_list.append(tf.gather(image_batch,true_idxs))
+                
+                # rotate if omniglot
                 if FLAGS.datasource == 'omniglot': # and FLAGS.train:
                     new_list[-1] = tf.stack([tf.reshape(tf.image.rot90(
                         tf.reshape(new_list[-1][ind], [self.img_size[0],self.img_size[1],1]),
                         k=tf.cast(rotations[0,class_idxs[ind]], tf.int32)), (self.dim_input,))
                         for ind in range(self.num_classes)])
+                
                 new_label_list.append(tf.gather(label_batch, true_idxs))
             new_list = tf.concat(new_list, 0)  # has shape [self.num_classes*self.num_samples_per_class, self.dim_input]
             new_label_list = tf.concat(new_label_list, 0)
@@ -178,7 +184,7 @@ class DataGenerator(object):
             all_label_batches.append(new_label_list)
         all_image_batches = tf.stack(all_image_batches)
         all_label_batches = tf.stack(all_label_batches)
-        all_label_batches = tf.one_hot(all_label_batches, self.num_classes)
+        all_label_batches = tf.one_hot(all_label_batches, self.num_classes) # Do one hot conversion for cross-entropy loss
         return all_image_batches, all_label_batches
 
     def generate_sinusoid_batch(self, train=True, input_idx=None):
