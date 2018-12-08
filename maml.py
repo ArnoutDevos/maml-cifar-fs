@@ -145,7 +145,7 @@ class MAML:
             if self.classification: # accuracies are also stored
                 out_dtype.extend([tf.float32, [tf.float32]*num_updates])
             # THE REAL LEARNING CONSTRUCTION OCCURS HERE
-            # executes in parallel
+            # IMPORTANT: executes in parallel for ALL TASKS in batch I guess? The inputs are formatted in a special way to contain multiple tasks?
             result = tf.map_fn(task_metalearn, elems=(self.inputa, self.inputb, self.labela, self.labelb), dtype=out_dtype, parallel_iterations=FLAGS.meta_batch_size)
             if self.classification:
                 outputas, outputbs, lossesa, lossesb, accuraciesa, accuraciesb = result
@@ -163,7 +163,8 @@ class MAML:
                 self.total_accuracies2 = total_accuracies2 = [tf.reduce_sum(accuraciesb[j]) / tf.to_float(FLAGS.meta_batch_size) for j in range(num_updates)]
             self.pretrain_op = tf.train.AdamOptimizer(self.meta_lr).minimize(total_loss1)
 
-            if FLAGS.metatrain_iterations > 0: # LAGS.metatrain_iterations = how many times to execute
+            if FLAGS.metatrain_iterations > 0: # FLAGS.metatrain_iterations = how many times to execute
+                # This is the meta optimizer
                 optimizer = tf.train.AdamOptimizer(self.meta_lr)
                 
                 # Compute gradients after num_updates
