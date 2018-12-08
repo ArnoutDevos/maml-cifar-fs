@@ -31,6 +31,7 @@ class MAML:
         elif FLAGS.datasource == 'omniglot' or FLAGS.datasource == 'miniimagenet' or FLAGS.datasource == 'cifarfs':
             self.loss_func = xent
             self.classification = True
+            
             if FLAGS.conv:
                 self.dim_hidden = FLAGS.num_filters
                 self.forward = self.forward_conv
@@ -39,22 +40,28 @@ class MAML:
                 self.dim_hidden = [256, 128, 64, 64]
                 self.forward=self.forward_fc
                 self.construct_weights = self.construct_fc_weights
+            
+            # Determine amount of channels to use
             if FLAGS.datasource == 'miniimagenet' or FLAGS.datasource == 'cifarfs':
                 self.channels = 3
             else:
                 self.channels = 1
-            self.img_size = int(np.sqrt(self.dim_input/self.channels))
+            
+            # Compute image width (=height)
+            self.img_size = int(np.sqrt(self.dim_input/self.channels)) # dim input is length of totally flattened image
         else:
             raise ValueError('Unrecognized data source.')
 
     def construct_model(self, input_tensors=None, prefix='metatrain_'):
+        # This function constructs the model, and defines the ops. The ops are not called yet! That happens in session.run(...)
+        
         # a: training data for inner gradient, b: test data for meta gradient
         if input_tensors is None:
             self.inputa = tf.placeholder(tf.float32)
             self.inputb = tf.placeholder(tf.float32)
             self.labela = tf.placeholder(tf.float32)
             self.labelb = tf.placeholder(tf.float32)
-        else:
+        else: # Directly couple input tensors from tf queue to object variables
             self.inputa = input_tensors['inputa']
             self.inputb = input_tensors['inputb']
             self.labela = input_tensors['labela']
@@ -62,10 +69,12 @@ class MAML:
 
         with tf.variable_scope('model', reuse=None) as training_scope:
             if 'weights' in dir(self):
+                # weights were already initialized during some training, reuse those
                 training_scope.reuse_variables()
                 weights = self.weights
             else:
                 # Define the weights
+                # this is done when construct_model is called
                 self.weights = weights = self.construct_weights()
 
             # outputbs[i] and lossesb[i] is the output and loss after i+1 gradient updates
@@ -86,23 +95,34 @@ class MAML:
 
                 task_outputa = self.forward(inputa, weights, reuse=reuse)  # only reuse on the first iter
                 task_lossa = self.loss_func(task_outputa, labela)
-
+                
+                # MAML line 5: evaluate grads on train set (a)
                 grads = tf.gradients(task_lossa, list(weights.values()))
                 if FLAGS.stop_grad:
                     grads = [tf.stop_gradient(grad) for grad in grads]
                 gradients = dict(zip(weights.keys(), grads))
+                
+                # MAML line 6: compute updates (adapted parameters)
                 fast_weights = dict(zip(weights.keys(), [weights[key] - self.update_lr*gradients[key] for key in weights.keys()]))
+                
+                # MAML line 8: calculate output/loss on test set (b)
                 output = self.forward(inputb, fast_weights, reuse=True)
                 task_outputbs.append(output)
                 task_lossesb.append(self.loss_func(output, labelb))
 
                 for j in range(num_updates - 1):
                     loss = self.loss_func(self.forward(inputa, fast_weights, reuse=True), labela)
+                    
+                    # MAML line 5: evaluate grads on train set (a)
                     grads = tf.gradients(loss, list(fast_weights.values()))
                     if FLAGS.stop_grad:
                         grads = [tf.stop_gradient(grad) for grad in grads]
                     gradients = dict(zip(fast_weights.keys(), grads))
+                    
+                    # MAML line 6: compute updates (adapted parameters)
                     fast_weights = dict(zip(fast_weights.keys(), [fast_weights[key] - self.update_lr*gradients[key] for key in fast_weights.keys()]))
+                    
+                    # MAML line 8: calculate output/loss on test set (b)
                     output = self.forward(inputb, fast_weights, reuse=True)
                     task_outputbs.append(output)
                     task_lossesb.append(self.loss_func(output, labelb))
@@ -117,13 +137,15 @@ class MAML:
 
                 return task_output
 
-            if FLAGS.norm is not 'None':
+            if FLAGS.norm is not 'None': # to initialize batch norm variables
                 # to initialize the batch norm vars, might want to combine this, and not run idx 0 twice.
                 unused = task_metalearn((self.inputa[0], self.inputb[0], self.labela[0], self.labelb[0]), False)
 
             out_dtype = [tf.float32, [tf.float32]*num_updates, tf.float32, [tf.float32]*num_updates]
-            if self.classification:
+            if self.classification: # accuracies are also stored
                 out_dtype.extend([tf.float32, [tf.float32]*num_updates])
+            # THE REAL LEARNING CONSTRUCTION OCCURS HERE
+            # IMPORTANT: executes in parallel for ALL TASKS in batch I guess? The inputs are formatted in a special way to contain multiple tasks?
             result = tf.map_fn(task_metalearn, elems=(self.inputa, self.inputb, self.labela, self.labelb), dtype=out_dtype, parallel_iterations=FLAGS.meta_batch_size)
             if self.classification:
                 outputas, outputbs, lossesa, lossesb, accuraciesa, accuraciesb = result
@@ -141,11 +163,18 @@ class MAML:
                 self.total_accuracies2 = total_accuracies2 = [tf.reduce_sum(accuraciesb[j]) / tf.to_float(FLAGS.meta_batch_size) for j in range(num_updates)]
             self.pretrain_op = tf.train.AdamOptimizer(self.meta_lr).minimize(total_loss1)
 
-            if FLAGS.metatrain_iterations > 0:
+            if FLAGS.metatrain_iterations > 0: # FLAGS.metatrain_iterations = how many times to execute
+                # This is the meta optimizer
                 optimizer = tf.train.AdamOptimizer(self.meta_lr)
+                
+                # Compute gradients after num_updates
                 self.gvs = gvs = optimizer.compute_gradients(self.total_losses2[FLAGS.num_updates-1])
+                
+                # Gradients are clipped by [-10,10] to avoid explosion?
                 if FLAGS.datasource == 'miniimagenet' or FLAGS.datasource == 'cifarfs':
                     gvs = [(tf.clip_by_value(grad, -10, 10), var) for grad, var in gvs]
+                    
+                # update parameters
                 self.metatrain_op = optimizer.apply_gradients(gvs)
         else:
             self.metaval_total_loss1 = total_loss1 = tf.reduce_sum(lossesa) / tf.to_float(FLAGS.meta_batch_size)

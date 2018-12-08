@@ -82,7 +82,7 @@ def train(model, saver, sess, exp_string, data_generator, resume_itr=0):
         TEST_PRINT_INTERVAL = PRINT_INTERVAL*5
     else:
         PRINT_INTERVAL = 100
-        TEST_PRINT_INTERVAL = PRINT_INTERVAL*5
+        TEST_PRINT_INTERVAL = PRINT_INTERVAL*5 # print (1) test eval result only after the train results are printed 5 times
 
     if FLAGS.log:
         train_writer = tf.summary.FileWriter(FLAGS.logdir + '/' + exp_string, sess.graph)
@@ -117,10 +117,16 @@ def train(model, saver, sess, exp_string, data_generator, resume_itr=0):
             input_tensors = [model.metatrain_op] # metatrain_op is a tf Operation that does the meta update with Adam
 
         if (itr % SUMMARY_INTERVAL == 0 or itr % PRINT_INTERVAL == 0):
+            # Add all the ops together in one big list, to evaluate them, and print I guess
+            # total_loss1 = train loss
+            # total_loss2 = test loss after num_updates (eval)
             input_tensors.extend([model.summ_op, model.total_loss1, model.total_losses2[FLAGS.num_updates-1]])
             if model.classification:
+                # total_accuracy1 = train accuracy
+                # total_loss2 = test accuracy after num_updates (eval)
                 input_tensors.extend([model.total_accuracy1, model.total_accuracies2[FLAGS.num_updates-1]])
-
+        
+        # Do one full meta train step
         result = sess.run(input_tensors, feed_dict)
 
         if itr % SUMMARY_INTERVAL == 0:
@@ -160,7 +166,8 @@ def train(model, saver, sess, exp_string, data_generator, resume_itr=0):
                     input_tensors = [model.total_accuracy1, model.total_accuracies2[FLAGS.num_updates-1]]
                 else:
                     input_tensors = [model.total_loss1, model.total_losses2[FLAGS.num_updates-1]]
-
+            
+            # This session run is to evaluate
             result = sess.run(input_tensors, feed_dict)
             print('Validation results: ' + str(result[0]) + ', ' + str(result[1]))
 
@@ -274,18 +281,20 @@ def main():
         num_classes = data_generator.num_classes
 
         if FLAGS.train: # only construct training model if needed
+            # meta train : num_total_batches = 200000 (number of tasks, not number of meta-iterations)
             random.seed(5)
             image_tensor, label_tensor = data_generator.make_data_tensor()
             inputa = tf.slice(image_tensor, [0,0,0], [-1,num_classes*FLAGS.update_batch_size, -1]) # slice(tensor, begin, slice_size)
-            inputb = tf.slice(image_tensor, [0,num_classes*FLAGS.update_batch_size, 0], [-1,-1,-1])
+            inputb = tf.slice(image_tensor, [0,num_classes*FLAGS.update_batch_size, 0], [-1,-1,-1]) # The extra 15 add here?!
             labela = tf.slice(label_tensor, [0,0,0], [-1,num_classes*FLAGS.update_batch_size, -1])
             labelb = tf.slice(label_tensor, [0,num_classes*FLAGS.update_batch_size, 0], [-1,-1,-1])
             input_tensors = {'inputa': inputa, 'inputb': inputb, 'labela': labela, 'labelb': labelb}
 
+        # meta val: num_total_batches = 600 (number of tasks, not number of meta-iterations)
         random.seed(6)
         image_tensor, label_tensor = data_generator.make_data_tensor(train=False)
-        inputa = tf.slice(image_tensor, [0,0,0], [-1,num_classes*FLAGS.update_batch_size, -1])
-        inputb = tf.slice(image_tensor, [0,num_classes*FLAGS.update_batch_size, 0], [-1,-1,-1])
+        inputa = tf.slice(image_tensor, [0,0,0], [-1,num_classes*FLAGS.update_batch_size, -1]) # slice the training examples here
+        inputb = tf.slice(image_tensor, [0,num_classes*FLAGS.update_batch_size, 0], [-1,-1,-1]) 
         labela = tf.slice(label_tensor, [0,0,0], [-1,num_classes*FLAGS.update_batch_size, -1])
         labelb = tf.slice(label_tensor, [0,num_classes*FLAGS.update_batch_size, 0], [-1,-1,-1])
         metaval_input_tensors = {'inputa': inputa, 'inputb': inputb, 'labela': labela, 'labelb': labelb}
@@ -293,16 +302,19 @@ def main():
         tf_data_load = False
         input_tensors = None
 
-    #Commented/tracked until here
-    model = MAML(dim_input, dim_output, test_num_updates=test_num_updates)
+    model = MAML(dim_input, dim_output, test_num_updates=test_num_updates) # test_num_updates = eval on at least one update for training, 10 testing
     if FLAGS.train or not tf_data_load:
         model.construct_model(input_tensors=input_tensors, prefix='metatrain_')
     if tf_data_load:
         model.construct_model(input_tensors=metaval_input_tensors, prefix='metaval_')
+    
+    # Op to retrieve summaries?
     model.summ_op = tf.summary.merge_all()
-
+    
+    # keep last 10 copies of trainable variables
     saver = loader = tf.train.Saver(tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES), max_to_keep=10)
-
+    
+    # remove the need to explicitly pass this Session object to run ops
     sess = tf.InteractiveSession()
 
     if FLAGS.train == False:
@@ -313,7 +325,12 @@ def main():
         FLAGS.train_update_batch_size = FLAGS.update_batch_size
     if FLAGS.train_update_lr == -1:
         FLAGS.train_update_lr = FLAGS.update_lr
-
+    
+    # cls = no of classes
+    # mbs = meta batch size
+    # ubs = update batch size
+    # numstep = number of INNER GRADIENT updates
+    # updatelr = inner gradient step
     exp_string = 'cls_'+str(FLAGS.num_classes)+'.mbs_'+str(FLAGS.meta_batch_size) + '.ubs_' + str(FLAGS.train_update_batch_size) + '.numstep' + str(FLAGS.num_updates) + '.updatelr' + str(FLAGS.train_update_lr)
 
     if FLAGS.num_filters != 64:
@@ -335,8 +352,10 @@ def main():
 
     resume_itr = 0
     model_file = None
-
+    
+    # Initialize all variables, and 
     tf.global_variables_initializer().run()
+    # starts threads for all queue runners collected in the graph
     tf.train.start_queue_runners()
 
     if FLAGS.resume or not FLAGS.train:
