@@ -28,7 +28,7 @@ After 60,000 iterations, with a 95% confidence interval, and 10 finetune steps:
 | miniImagenet, MAML 5-way, 1-shot | 47.6 ± 1.9% | 48.7 ± 1.8% |
 | miniImagenet, MAML 5-way, 5-shot | 62.3 ± 0.9% | 63.1 ± 0.9% |
 | miniImagenet, MAML 2-way, 1-shot | - | 74.9 ± 3.0% |
-| miniImagenet, MAML 2-way, 5-shot | - | 84.4 ± 1.2% |
+| miniImagenet, MAML 2-way, 5-shot | 82.6 ± 1.2% | 84.4 ± 1.2% |
 
 ### References
 
