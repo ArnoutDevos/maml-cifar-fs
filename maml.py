@@ -193,7 +193,9 @@ class MAML:
             if self.classification:
                 tf.summary.scalar(prefix+'Post-update accuracy, step ' + str(j+1), total_accuracies2[j])
 
-    ### Network construction functions (fc networks and conv networks)
+    ### Network construction functions
+    ## not CNN
+    # only used for sinusoid, and for non convolutional DNN on image datasets.
     def construct_fc_weights(self):
         weights = {}
         weights['w1'] = tf.Variable(tf.truncated_normal([self.dim_input, self.dim_hidden[0]], stddev=0.01))
@@ -204,13 +206,16 @@ class MAML:
         weights['w'+str(len(self.dim_hidden)+1)] = tf.Variable(tf.truncated_normal([self.dim_hidden[-1], self.dim_output], stddev=0.01))
         weights['b'+str(len(self.dim_hidden)+1)] = tf.Variable(tf.zeros([self.dim_output]))
         return weights
-
+    
+    # only used for sinusoid, and for non convolutional DNN on image datasets.
     def forward_fc(self, inp, weights, reuse=False):
         hidden = normalize(tf.matmul(inp, weights['w1']) + weights['b1'], activation=tf.nn.relu, reuse=reuse, scope='0')
         for i in range(1,len(self.dim_hidden)):
             hidden = normalize(tf.matmul(hidden, weights['w'+str(i+1)]) + weights['b'+str(i+1)], activation=tf.nn.relu, reuse=reuse, scope=str(i+1))
         return tf.matmul(hidden, weights['w'+str(len(self.dim_hidden)+1)]) + weights['b'+str(len(self.dim_hidden)+1)]
-
+    
+    ## CNN
+    # initialize and return weights for CNN
     def construct_conv_weights(self):
         weights = {}
 
@@ -240,6 +245,7 @@ class MAML:
             weights['b5'] = tf.Variable(tf.zeros([self.dim_output]), name='b5')
         return weights
 
+    # return output of input image, with weights given as argument!
     def forward_conv(self, inp, weights, reuse=False, scope=''):
         # reuse is for the normalization parameters.
         channels = self.channels

@@ -258,7 +258,7 @@ def main():
             data_generator = DataGenerator(1, FLAGS.meta_batch_size)  # only use one datapoint,
         else:
             if FLAGS.datasource == 'miniimagenet' or FLAGS.datasource == 'cifarfs': # TODO - use 15 val examples for imagenet?
-                if FLAGS.train: # TODO: why +15 and *2 --> followin Ravi: "15 examples per class were used for evaluating the post-update meta-gradient" --> see how 5 and 15 is split up in maml.py?
+                if FLAGS.train: # TODO: why +15 and *2 --> followin Ravi: "15 examples per class were used for evaluating the post-update meta-gradient" = MAML algo 2, line 10 --> see how 5 and 15 is split up in maml.py?
                     # DataGenerator(number_of_images_per_class, number_of_tasks_in_batch)
                     data_generator = DataGenerator(FLAGS.update_batch_size+15, FLAGS.meta_batch_size)  # only use one datapoint for testing to save memory
                 else:
