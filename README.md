@@ -9,6 +9,8 @@ This code requires the following:
 * python 2.\* or python 3.\*
 * TensorFlow v1.0+
 
+These results were achieved using TensorFlow-gpu 1.8.0, CUDA 9.0 and cudnn 7.
+
 ### Data
 For the Omniglot, MiniImagenet and CIFAR-FS data, see the usage instructions in `data/omniglot_resized/resize_images.py` and `data/miniImagenet/proc_images.py` and `data/CIFARFS/get_cifarfs.py` respectively.
 
