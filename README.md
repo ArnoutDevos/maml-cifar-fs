@@ -28,7 +28,7 @@ After 60,000 iterations, with a 95% confidence interval, and 10 finetune steps:
 | CIFAR-FS, MAML 2-way, 1-shot | 83.1 ± 2.6% | 82.8 ± 2.7% |
 | CIFAR-FS, MAML 2-way, 5-shot | 88.5 ± 1.1% | 88.3 ± 1.1% |
 | miniImagenet, MAML 5-way, 1-shot | 47.6 ± 1.9% | 48.7 ± 1.8% |
-| miniImagenet, MAML 5-way, 5-shot | 62.3 ± 0.9% | 63.1 ± 0.9% |
+| miniImagenet, MAML 5-way, 5-shot | 63.0 ± 0.9% | 63.1 ± 0.9% |
 | miniImagenet, MAML 2-way, 1-shot | 78.8 ± 2.8% | 74.9 ± 3.0% |
 | miniImagenet, MAML 2-way, 5-shot | 82.6 ± 1.2% | 84.4 ± 1.2% |
 
