@@ -1,8 +1,10 @@
 # Model-Agnostic Meta-Learning on Omniglot, miniImageNet, and CIFAR-FS
 
-This repo extends the original MAML code ([link](https://github.com/cbfinn/maml), [ICML 2017 paper](https://arxiv.org/abs/1703.03400)) [1] with CIFAR-FS classification based on the splits in Luca et al. [2]. It includes code for running the few-shot supervised learning domain experiments, including sinusoid regression, Omniglot classification, MiniImagenet classification, and the newly added CIFAR-FS classification.
+This repo extends the original MAML code ([link](https://github.com/cbfinn/maml), [ICML 2017 paper](https://arxiv.org/abs/1703.03400)) [1] with **CIFAR-FS** (CIFAR few shot) classification based on the splits in Luca et al. [2]. It includes code for running the few-shot supervised learning domain experiments, including sinusoid regression, Omniglot classification, MiniImagenet classification, and the newly added CIFAR-FS classification.
 
 For the experiments in the RL domain, see [this codebase](https://github.com/cbfinn/maml_rl).
+
+A report detailing the implementation details and reproducibility can be found [here](https://openreview.net/forum?id=BJx0N2I6IN).
 
 ### Dependencies
 This code requires the following:
@@ -31,6 +33,15 @@ After 60,000 iterations, with a 95% confidence interval, and 10 finetune steps:
 | miniImagenet, MAML 5-way, 5-shot | 63.0 ± 0.9% | 63.1 ± 0.9% |
 | miniImagenet, MAML 2-way, 1-shot | 78.8 ± 2.8% | 74.9 ± 3.0% |
 | miniImagenet, MAML 2-way, 5-shot | 82.6 ± 1.2% | 84.4 ± 1.2% |
+
+### Cite this work
+If you use (part of) this code or work, please cite the following work:
+```
+@article{devosreproducing,
+  title={Reproducing Meta-learning with differentiable closed-form solvers},
+  author={Devos, Arnout and Chatel, Sylvain and Grossglauser, Matthias}
+}
+```
 
 ### References
 
