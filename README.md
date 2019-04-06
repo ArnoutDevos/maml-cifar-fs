@@ -39,10 +39,12 @@ If you use (part of) this code or work, please cite the following work:
 ```
 @article{devosreproducing,
   title={Reproducing Meta-learning with differentiable closed-form solvers},
-  author={Devos, Arnout and Chatel, Sylvain and Grossglauser, Matthias}
+  author={Devos, Arnout and Chatel, Sylvain and Grossglauser, Matthias},
+  booktitle={International Conference on Learning Representations},
+  year={2019},
+  url={https://openreview.net/forum?id=BJx0N2I6IN},
 }
 ```
-
 ### References
 
 [1] Finn, Chelsea, Pieter Abbeel, and Sergey Levine. "Model-agnostic meta-learning for fast adaptation of deep networks." *arXiv preprint arXiv:1703.03400* (2017).
