@@ -34,6 +34,8 @@ After 60,000 iterations, with a 95% confidence interval, and 10 finetune steps:
 | miniImagenet, MAML 2-way, 1-shot | 78.8 ± 2.8% | 74.9 ± 3.0% |
 | miniImagenet, MAML 2-way, 5-shot | 82.6 ± 1.2% | 84.4 ± 1.2% |
 
+![alt text](https://i.ibb.co/nc49m4c/Screen-Shot-2019-04-26-at-14-22-45.png)
+
 ### Cite this work
 If you use (part of) this code or work, please cite the following work:
 ```
